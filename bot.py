@@ -1,18 +1,26 @@
+from dotenv import load_dotenv
+import os
 import json
 import logging
-import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, CallbackContext
 from wallet_ui import generate_wallet_card
 from referral_system import process_referral, reward_referral
 from rpc import generate_wallet, get_balance, send_transaction
 
+# Load environment variables from .env
+load_dotenv()
+
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+ADMIN_IDS = os.environ.get("ADMIN_IDS", "")
+ADMIN_IDS = [int(uid) for uid in ADMIN_IDS.split(",") if uid]
+
+if not TOKEN:
+    raise ValueError("TELEGRAM_BOT_TOKEN is not set in the .env file!")
+
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN_HERE")
 DATABASE_FILE = "database.json"
-ADMIN_IDS = os.environ.get("ADMIN_IDS", "")  # comma-separated admin Telegram IDs
-ADMIN_IDS = [int(uid) for uid in ADMIN_IDS.split(",") if uid]
 
 # Load or create database
 def load_db():
@@ -28,6 +36,7 @@ def save_db(db):
 
 db = load_db()
 
+# /start command
 def start(update: Update, context: CallbackContext):
     user_id = str(update.message.from_user.id)
     user = db.get(user_id)
@@ -57,6 +66,7 @@ def start(update: Update, context: CallbackContext):
         reply_markup=reply_markup
     )
 
+# /admin command
 def admin(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     if user_id not in ADMIN_IDS:
@@ -67,6 +77,7 @@ def admin(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text("Admin Panel", reply_markup=reply_markup)
 
+# Inline button handler
 def button(update: Update, context: CallbackContext):
     query = update.callback_query
     query.answer()
@@ -90,6 +101,7 @@ def button(update: Update, context: CallbackContext):
             lines.append(f"User {uid}: {len(info.get('referrals', []))} referrals")
         query.message.reply_text("\n".join(lines))
 
+# Main bot function
 def main():
     updater = Updater(TOKEN)
     dp = updater.dispatcher
