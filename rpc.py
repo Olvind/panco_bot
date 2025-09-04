@@ -18,7 +18,7 @@ def save_db(db):
 def get_balance(address):
     db = load_db()
     if address not in db:
-        db[address] = {"balance": 100.0}  # give some test balance
+        db[address] = {"balance": 100.0}  # test starting balance
         save_db(db)
     return db[address]["balance"]
 
